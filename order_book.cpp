@@ -54,7 +54,7 @@ void OrderBook::initialize() {
 
 void OrderBook::shutdown() {}
 
-t_orderid OrderBook::limit(t_order& order) {
+t_orderid OrderBook::limit(t_order order) {
   t_price price = order.price;
   t_size orderSize = order.size;
 

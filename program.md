@@ -52,3 +52,4 @@
 | 1 | 添加分支预测优化 (__builtin_expect) 到 order.side 判断和 bookEntry->size < orderSize 比较 | ✅ | `55.33` | **Keep** | 成功提升 18.7%，新基线: 55.33 |
 | 2 | 添加缓存行对齐 (alignas(64)) 到 OrderBookEntry 结构和热路径变量 (curOrderID, askMin, bidMax) | ✅ | `53.77` | **Keep** | 成功提升 2.8%，新基线: 53.77 |
 | 3 | 跳过已取消订单 (size==0) 并移除冗余的 erase() 调用 | ✅ | `53.35` | **Keep** | 成功提升 0.8%，新基线: 53.35 |
+| 4 | 内联 executeTrade 函数以减少函数调用开销 | ✅ | `52.97` | **Keep** | 成功提升 0.7%，新基线: 52.97 |

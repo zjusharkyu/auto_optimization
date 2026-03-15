@@ -15,8 +15,7 @@ class OrderBook : public boost::noncopyable {
 
   void shutdown();
 
-  // TODO: take by value?
-  t_orderid limit(t_order& order);
+  t_orderid limit(t_order order);
 
   void cancel(t_orderid orderid);
 
