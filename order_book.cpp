@@ -84,8 +84,11 @@ t_orderid OrderBook::limit(t_order order) {
             else
               ++bookEntry;
 
-            while (ppEntry->begin() != bookEntry) {
-              ppEntry->pop_front();
+            // Optimized pop_front loop - remove processed entries
+            auto it = ppEntry->begin();
+            while (it != bookEntry) {
+              ppEntry->erase_after(ppEntry->before_begin());
+              it = ppEntry->begin();
             }
             return ++hotPathVars.curOrderID;
           }
@@ -150,8 +153,11 @@ t_orderid OrderBook::limit(t_order order) {
             else
               ++bookEntry;
 
-            while (ppEntry->begin() != bookEntry) {
-              ppEntry->pop_front();
+            // Optimized pop_front loop - remove processed entries
+            auto it = ppEntry->begin();
+            while (it != bookEntry) {
+              ppEntry->erase_after(ppEntry->before_begin());
+              it = ppEntry->begin();
             }
             return ++hotPathVars.curOrderID;
           }
