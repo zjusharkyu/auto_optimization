@@ -65,7 +65,9 @@ t_orderid OrderBook::limit(t_order& order) {
       do {
         auto bookEntry = ppEntry->begin();
         while (bookEntry != ppEntry->end()) {
-          if (__builtin_expect(bookEntry->size < orderSize, 1)) {
+          if (__builtin_expect(bookEntry->size == 0, 0)) {
+            ++bookEntry;
+          } else if (__builtin_expect(bookEntry->size < orderSize, 1)) {
             executeTrade(order.symbol, order.trader, bookEntry->trader, price,
                          bookEntry->size);
             orderSize -= bookEntry->size;
@@ -78,7 +80,6 @@ t_orderid OrderBook::limit(t_order& order) {
             else
               ++bookEntry;
 
-            ppEntry->erase(ppEntry->begin(), bookEntry);
             while (ppEntry->begin() != bookEntry) {
               ppEntry->pop_front();
             }
@@ -107,7 +108,9 @@ t_orderid OrderBook::limit(t_order& order) {
       do {
         auto bookEntry = ppEntry->begin();
         while (bookEntry != ppEntry->end()) {
-          if (__builtin_expect(bookEntry->size < orderSize, 1)) {
+          if (__builtin_expect(bookEntry->size == 0, 0)) {
+            ++bookEntry;
+          } else if (__builtin_expect(bookEntry->size < orderSize, 1)) {
             executeTrade(order.symbol, bookEntry->trader, order.trader, price,
                          bookEntry->size);
             orderSize -= bookEntry->size;
