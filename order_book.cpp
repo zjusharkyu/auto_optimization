@@ -36,6 +36,7 @@ void OrderBook::shutdown() {}
 t_orderid OrderBook::limit(t_order order) {
   t_price price = order.price;
   t_size orderSize = order.size;
+  Field orderSymbol = order.symbol;  // Cache symbol to avoid repeated member access
   PricePoint* pricePointsPtr = pricePoints.data();  // Raw pointer for faster access
 
   if (__builtin_expect(order.side == 0, 1)) {/* Buy order */
@@ -52,7 +53,7 @@ t_orderid OrderBook::limit(t_order order) {
             // Inline executeTrade for buy order
             {
               t_execution exec;
-              exec.symbol = order.symbol;
+              exec.symbol = orderSymbol;
               exec.price = price;
               exec.size = entrySize;
               exec.side = 0;
@@ -68,7 +69,7 @@ t_orderid OrderBook::limit(t_order order) {
             // Inline executeTrade for buy order (entrySize >= orderSize)
             {
               t_execution exec;
-              exec.symbol = order.symbol;
+              exec.symbol = orderSymbol;
               exec.price = price;
               exec.size = orderSize;
               exec.side = 0;
@@ -118,7 +119,7 @@ t_orderid OrderBook::limit(t_order order) {
             // Inline executeTrade for sell order
             {
               t_execution exec;
-              exec.symbol = order.symbol;
+              exec.symbol = orderSymbol;
               exec.price = price;
               exec.size = entrySize;
               exec.side = 0;
@@ -134,7 +135,7 @@ t_orderid OrderBook::limit(t_order order) {
             // Inline executeTrade for sell order (entrySize >= orderSize)
             {
               t_execution exec;
-              exec.symbol = order.symbol;
+              exec.symbol = orderSymbol;
               exec.price = price;
               exec.size = orderSize;
               exec.side = 0;
