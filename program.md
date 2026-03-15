@@ -53,4 +53,4 @@
 | 2 | 添加缓存行对齐 (alignas(64)) 到 OrderBookEntry 结构和热路径变量 (curOrderID, askMin, bidMax) | ✅ | `53.77` | **Keep** | 成功提升 2.8%，新基线: 53.77 |
 | 3 | 跳过已取消订单 (size==0) 并移除冗余的 erase() 调用 | ✅ | `53.35` | **Keep** | 成功提升 0.8%，新基线: 53.35 |
 | 4 | 内联 executeTrade 函数以减少函数调用开销 | ✅ | `52.97` | **Keep** | 成功提升 0.7%，新基线: 52.97 |
-| 5 | 将 limit order 参数从引用改为传值 (t_order& -> t_order) | ✅ | `52.82` | **Keep** | 成功提升 0.3%，新基线: 52.82 |
+| 5 | 将 limit order 参数从引用改为传值 (t_order& -> t_order) | ✅ | `52.82` | **Keep** | 成功提升 0.3%，新基线: 52.82 || 9 | 尝试移除 cache_last<true> 配置以优化 pop_front 性能 | ❌ | N/A | Discard | 编译错误：push_back() 需要 cache_last<true>，无法移除此配置 |

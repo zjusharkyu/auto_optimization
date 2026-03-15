@@ -9,28 +9,7 @@ namespace OB {
 
 namespace {
 
-/* Report trade execution */
-void executeTrade(const Field& symbol, const Field& buyTrader,
-                  const Field& sellTrader, t_price tradePrice,
-                  t_size tradeSize) {
-  t_execution exec;
-
-  if (tradeSize == 0) /* Skip orders that have been cancelled */
-    return;
-
-  exec.symbol = symbol;
-
-  exec.price = tradePrice;
-  exec.size = tradeSize;
-
-  exec.side = 0;
-  exec.trader = buyTrader;
-  execution(exec); /* Report the buy-side trade */
-
-  exec.side = 1;
-  exec.trader = sellTrader;
-  execution(exec); /* Report the sell-side trade */
-}
+/* Note: executeTrade has been inlined into the matching loops for better performance */
 }
 
 OrderBook& OrderBook::get() {
@@ -66,15 +45,16 @@ t_orderid OrderBook::limit(t_order order) {
       do {
         auto bookEntry = ppEntry->begin();
         while (bookEntry != ppEntry->end()) {
-          if (__builtin_expect(bookEntry->size == 0, 0)) {
+          t_size entrySize = bookEntry->size;
+          if (__builtin_expect(entrySize == 0, 0)) {
             ++bookEntry;
-          } else if (__builtin_expect(bookEntry->size < orderSize, 1)) {
+          } else if (__builtin_expect(entrySize < orderSize, 1)) {
             // Inline executeTrade for buy order
             {
               t_execution exec;
               exec.symbol = order.symbol;
               exec.price = price;
-              exec.size = bookEntry->size;
+              exec.size = entrySize;
               exec.side = 0;
               exec.trader = order.trader;
               execution(exec);
@@ -82,10 +62,10 @@ t_orderid OrderBook::limit(t_order order) {
               exec.trader = bookEntry->trader;
               execution(exec);
             }
-            orderSize -= bookEntry->size;
+            orderSize -= entrySize;
             ++bookEntry;
           } else {
-            // Inline executeTrade for buy order
+            // Inline executeTrade for buy order (entrySize >= orderSize)
             {
               t_execution exec;
               exec.symbol = order.symbol;
@@ -98,8 +78,8 @@ t_orderid OrderBook::limit(t_order order) {
               exec.trader = bookEntry->trader;
               execution(exec);
             }
-            if (bookEntry->size > orderSize)
-              bookEntry->size -= orderSize;
+            if (entrySize > orderSize)
+              bookEntry->size = entrySize - orderSize;
             else
               ++bookEntry;
 
@@ -131,15 +111,16 @@ t_orderid OrderBook::limit(t_order order) {
       do {
         auto bookEntry = ppEntry->begin();
         while (bookEntry != ppEntry->end()) {
-          if (__builtin_expect(bookEntry->size == 0, 0)) {
+          t_size entrySize = bookEntry->size;
+          if (__builtin_expect(entrySize == 0, 0)) {
             ++bookEntry;
-          } else if (__builtin_expect(bookEntry->size < orderSize, 1)) {
+          } else if (__builtin_expect(entrySize < orderSize, 1)) {
             // Inline executeTrade for sell order
             {
               t_execution exec;
               exec.symbol = order.symbol;
               exec.price = price;
-              exec.size = bookEntry->size;
+              exec.size = entrySize;
               exec.side = 0;
               exec.trader = bookEntry->trader;
               execution(exec);
@@ -147,10 +128,10 @@ t_orderid OrderBook::limit(t_order order) {
               exec.trader = order.trader;
               execution(exec);
             }
-            orderSize -= bookEntry->size;
+            orderSize -= entrySize;
             ++bookEntry;
           } else {
-            // Inline executeTrade for sell order
+            // Inline executeTrade for sell order (entrySize >= orderSize)
             {
               t_execution exec;
               exec.symbol = order.symbol;
@@ -163,8 +144,8 @@ t_orderid OrderBook::limit(t_order order) {
               exec.trader = order.trader;
               execution(exec);
             }
-            if (bookEntry->size > orderSize)
-              bookEntry->size -= orderSize;
+            if (entrySize > orderSize)
+              bookEntry->size = entrySize - orderSize;
             else
               ++bookEntry;
 
