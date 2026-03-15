@@ -58,14 +58,14 @@ t_orderid OrderBook::limit(t_order& order) {
   t_price price = order.price;
   t_size orderSize = order.size;
 
-  if (order.side == 0) {/* Buy order */
+  if (__builtin_expect(order.side == 0, 1)) {/* Buy order */
     /* Look for outstanding sell orders that cross with the incoming order */
     if (price >= askMin) {
       auto ppEntry = pricePoints.begin() + askMin;
       do {
         auto bookEntry = ppEntry->begin();
         while (bookEntry != ppEntry->end()) {
-          if (bookEntry->size < orderSize) {
+          if (__builtin_expect(bookEntry->size < orderSize, 1)) {
             executeTrade(order.symbol, order.trader, bookEntry->trader, price,
                          bookEntry->size);
             orderSize -= bookEntry->size;
@@ -107,7 +107,7 @@ t_orderid OrderBook::limit(t_order& order) {
       do {
         auto bookEntry = ppEntry->begin();
         while (bookEntry != ppEntry->end()) {
-          if (bookEntry->size < orderSize) {
+          if (__builtin_expect(bookEntry->size < orderSize, 1)) {
             executeTrade(order.symbol, bookEntry->trader, order.trader, price,
                          bookEntry->size);
             orderSize -= bookEntry->size;

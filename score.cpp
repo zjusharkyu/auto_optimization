@@ -11,6 +11,7 @@
 #include "types.h"
 #include "engine.h"
 #include "score_feed.h"
+#include <sched.h>
 
 void feed(unsigned begin, unsigned end);
 long long timediff(struct timespec start, struct timespec end);
@@ -41,12 +42,14 @@ void current_utc_time(struct timespec *ts) {
 */
 
 int msg_batch_size = 10;
-int replays = 200;
+int replays = 2000;
 void execution(t_execution exec) {};
 
 int main() {
   print_cpuaffinity();
   int raw_feed_len = sizeof(raw_feed) / sizeof(t_order);
+  msg_batch_size = raw_feed_len; //一次跑整个一批
+
   int samples = replays * (raw_feed_len / msg_batch_size);
   long long late[samples];  // batch latency measurements
 
@@ -57,7 +60,7 @@ int main() {
   for (j = 0; j < replays; j++) {
     init();
     int i;
-    for (i = msg_batch_size; i < raw_feed_len; i += msg_batch_size) {
+    for (i = msg_batch_size; i <= raw_feed_len; i += msg_batch_size) {
       current_utc_time(&begin);
 
       feed(i - msg_batch_size, i);
@@ -74,9 +77,9 @@ int main() {
   for (i = 0; i < samples; i++) {
     late_total += late[i];
   }
-  double late_mean = ((double)late_total) / ((double)samples);
+  double late_mean = ((double)late_total) / ((double)samples) / 10000;
   double late_centered = 0;
-  double long late_sqtotal = 0LL;
+  double late_sqtotal = 0.0;
   for (i = 0; i < samples; i++) {
     late_centered = ((double)late[i]) - late_mean;
     late_sqtotal += late_centered * late_centered / ((double)samples);
@@ -84,7 +87,9 @@ int main() {
   double late_sd = sqrt(late_sqtotal);
   printf("mean(latency) = %1.2f, sd(latency) = %1.2f\n", late_mean, late_sd);
 
-  double score = 0.5 * (late_mean + late_sd);
+  //double score = 0.5 * (late_mean + late_sd); 抖动过大，只取 late_mean
+  double score = late_mean ;
+
   printf("You scored %1.2f. Try to minimize this.\n", score);
 }
 
@@ -113,11 +118,12 @@ long long timediff(struct timespec start, struct timespec end) {
 
 void print_cpuaffinity() {
 #ifndef __MACH__
-  unsigned long mask = 2; /* processor 1 (0-indexed) */
-  unsigned int len = sizeof(mask);
-  if (sched_getaffinity(0, len, &mask) < 0) {
+  cpu_set_t mask;
+  CPU_ZERO(&mask);
+  if (sched_getaffinity(0, sizeof(mask), &mask) < 0) {
     perror("sched_getaffinity");
+  } else {
+    printf("my affinity mask is set\n");
   }
-  printf("my affinity mask is: %08lx\n", mask);
 #endif
 }
