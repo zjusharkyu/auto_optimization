@@ -23,7 +23,7 @@ class OrderBook : public boost::noncopyable {
  private:
   OrderBook() {}
 
-  struct OrderBookEntry : public boost::intrusive::slist_base_hook<> {
+  struct alignas(64) OrderBookEntry : public boost::intrusive::slist_base_hook<> {
     t_size size{0}; /* Order size * */
     Field trader{};
   };
@@ -36,11 +36,11 @@ class OrderBook : public boost::noncopyable {
   std::vector<OrderBookEntry> arenaBookEntries;
   std::vector<PricePoint> pricePoints;
 
-  // Monotonically-increasing orderID
-  t_orderid curOrderID;
-  // Minimum Ask price
-  t_price askMin;
-  // Maximum Bid price
-  t_price bidMax;
+  // Hot-path variables aligned to prevent false sharing
+  struct alignas(64) HotPathVars {
+    t_orderid curOrderID;  // Monotonically-increasing orderID
+    t_price askMin;        // Minimum Ask price
+    t_price bidMax;        // Maximum Bid price
+  } hotPathVars;
 };
 }

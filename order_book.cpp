@@ -47,9 +47,9 @@ void OrderBook::initialize() {
 
   arenaBookEntries.resize(kMaxNumOrders);
 
-  curOrderID = 0;
-  askMin = kMaxPrice;
-  bidMax = kMinPrice;
+  hotPathVars.curOrderID = 0;
+  hotPathVars.askMin = kMaxPrice;
+  hotPathVars.bidMax = kMinPrice;
 }
 
 void OrderBook::shutdown() {}
@@ -60,8 +60,8 @@ t_orderid OrderBook::limit(t_order& order) {
 
   if (__builtin_expect(order.side == 0, 1)) {/* Buy order */
     /* Look for outstanding sell orders that cross with the incoming order */
-    if (price >= askMin) {
-      auto ppEntry = pricePoints.begin() + askMin;
+    if (price >= hotPathVars.askMin) {
+      auto ppEntry = pricePoints.begin() + hotPathVars.askMin;
       do {
         auto bookEntry = ppEntry->begin();
         while (bookEntry != ppEntry->end()) {
@@ -82,28 +82,28 @@ t_orderid OrderBook::limit(t_order& order) {
             while (ppEntry->begin() != bookEntry) {
               ppEntry->pop_front();
             }
-            return ++curOrderID;
+            return ++hotPathVars.curOrderID;
           }
         }
         /* We have exhausted all orders at the askMin price point. Move on to
            the next price level. */
         ppEntry->clear();
         ppEntry++;
-        askMin++;
-      } while (price >= askMin);
+        hotPathVars.askMin++;
+      } while (price >= hotPathVars.askMin);
     }
 
-    auto entry = arenaBookEntries.begin() + (++curOrderID);
+    auto entry = arenaBookEntries.begin() + (++hotPathVars.curOrderID);
     entry->size = orderSize;
     entry->trader = order.trader;
     pricePoints[price].push_back(*entry);
-    if (bidMax < price) bidMax = price;
-    return curOrderID;
+    if (hotPathVars.bidMax < price) hotPathVars.bidMax = price;
+    return hotPathVars.curOrderID;
 
   } else {/* Sell order */
     /* Look for outstanding Buy orders that cross with the incoming order */
-    if (price <= bidMax) {
-      auto ppEntry = pricePoints.begin() + bidMax;
+    if (price <= hotPathVars.bidMax) {
+      auto ppEntry = pricePoints.begin() + hotPathVars.bidMax;
       do {
         auto bookEntry = ppEntry->begin();
         while (bookEntry != ppEntry->end()) {
@@ -123,7 +123,7 @@ t_orderid OrderBook::limit(t_order& order) {
             while (ppEntry->begin() != bookEntry) {
               ppEntry->pop_front();
             }
-            return ++curOrderID;
+            return ++hotPathVars.curOrderID;
           }
         }
 
@@ -131,16 +131,16 @@ t_orderid OrderBook::limit(t_order& order) {
            the next price level. */
         ppEntry->clear();
         ppEntry--;
-        bidMax--;
-      } while (price <= bidMax);
+        hotPathVars.bidMax--;
+      } while (price <= hotPathVars.bidMax);
     }
 
-    auto entry = arenaBookEntries.begin() + (++curOrderID);
+    auto entry = arenaBookEntries.begin() + (++hotPathVars.curOrderID);
     entry->size = orderSize;
     entry->trader = order.trader;
     pricePoints[price].push_back(*entry);
-    if (askMin > price) askMin = price;
-    return curOrderID;
+    if (hotPathVars.askMin > price) hotPathVars.askMin = price;
+    return hotPathVars.curOrderID;
   }
 }
 
