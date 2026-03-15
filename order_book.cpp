@@ -68,13 +68,35 @@ t_orderid OrderBook::limit(t_order& order) {
           if (__builtin_expect(bookEntry->size == 0, 0)) {
             ++bookEntry;
           } else if (__builtin_expect(bookEntry->size < orderSize, 1)) {
-            executeTrade(order.symbol, order.trader, bookEntry->trader, price,
-                         bookEntry->size);
+            // Inline executeTrade for buy order
+            {
+              t_execution exec;
+              exec.symbol = order.symbol;
+              exec.price = price;
+              exec.size = bookEntry->size;
+              exec.side = 0;
+              exec.trader = order.trader;
+              execution(exec);
+              exec.side = 1;
+              exec.trader = bookEntry->trader;
+              execution(exec);
+            }
             orderSize -= bookEntry->size;
             ++bookEntry;
           } else {
-            executeTrade(order.symbol, order.trader, bookEntry->trader, price,
-                         orderSize);
+            // Inline executeTrade for buy order
+            {
+              t_execution exec;
+              exec.symbol = order.symbol;
+              exec.price = price;
+              exec.size = orderSize;
+              exec.side = 0;
+              exec.trader = order.trader;
+              execution(exec);
+              exec.side = 1;
+              exec.trader = bookEntry->trader;
+              execution(exec);
+            }
             if (bookEntry->size > orderSize)
               bookEntry->size -= orderSize;
             else
@@ -111,13 +133,35 @@ t_orderid OrderBook::limit(t_order& order) {
           if (__builtin_expect(bookEntry->size == 0, 0)) {
             ++bookEntry;
           } else if (__builtin_expect(bookEntry->size < orderSize, 1)) {
-            executeTrade(order.symbol, bookEntry->trader, order.trader, price,
-                         bookEntry->size);
+            // Inline executeTrade for sell order
+            {
+              t_execution exec;
+              exec.symbol = order.symbol;
+              exec.price = price;
+              exec.size = bookEntry->size;
+              exec.side = 0;
+              exec.trader = bookEntry->trader;
+              execution(exec);
+              exec.side = 1;
+              exec.trader = order.trader;
+              execution(exec);
+            }
             orderSize -= bookEntry->size;
             ++bookEntry;
           } else {
-            executeTrade(order.symbol, bookEntry->trader, order.trader, price,
-                         orderSize);
+            // Inline executeTrade for sell order
+            {
+              t_execution exec;
+              exec.symbol = order.symbol;
+              exec.price = price;
+              exec.size = orderSize;
+              exec.side = 0;
+              exec.trader = bookEntry->trader;
+              execution(exec);
+              exec.side = 1;
+              exec.trader = order.trader;
+              execution(exec);
+            }
             if (bookEntry->size > orderSize)
               bookEntry->size -= orderSize;
             else
