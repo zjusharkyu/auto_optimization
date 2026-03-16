@@ -9,28 +9,7 @@ namespace OB {
 
 namespace {
 
-/* Report trade execution */
-void executeTrade(const Field& symbol, const Field& buyTrader,
-                  const Field& sellTrader, t_price tradePrice,
-                  t_size tradeSize) {
-  t_execution exec;
-
-  if (tradeSize == 0) /* Skip orders that have been cancelled */
-    return;
-
-  exec.symbol = symbol;
-
-  exec.price = tradePrice;
-  exec.size = tradeSize;
-
-  exec.side = 0;
-  exec.trader = buyTrader;
-  execution(exec); /* Report the buy-side trade */
-
-  exec.side = 1;
-  exec.trader = sellTrader;
-  execution(exec); /* Report the sell-side trade */
-}
+/* Note: executeTrade has been inlined into the matching loops for better performance */
 }
 
 OrderBook& OrderBook::get() {
@@ -47,83 +26,140 @@ void OrderBook::initialize() {
 
   arenaBookEntries.resize(kMaxNumOrders);
 
-  curOrderID = 0;
-  askMin = kMaxPrice;
-  bidMax = kMinPrice;
+  hotPathVars.curOrderID = 0;
+  hotPathVars.askMin = kMaxPrice;
+  hotPathVars.bidMax = kMinPrice;
 }
 
 void OrderBook::shutdown() {}
 
-t_orderid OrderBook::limit(t_order& order) {
+t_orderid OrderBook::limit(t_order order) {
   t_price price = order.price;
   t_size orderSize = order.size;
+  Field orderSymbol = order.symbol;  // Cache symbol to avoid repeated member access
+  PricePoint* pricePointsPtr = pricePoints.data();  // Raw pointer for faster access
 
-  if (order.side == 0) {/* Buy order */
+  if (__builtin_expect(order.side == 0, 1)) {/* Buy order */
     /* Look for outstanding sell orders that cross with the incoming order */
-    if (price >= askMin) {
-      auto ppEntry = pricePoints.begin() + askMin;
+    if (price >= hotPathVars.askMin) {
+      auto ppEntry = pricePointsPtr + hotPathVars.askMin;
       do {
         auto bookEntry = ppEntry->begin();
         while (bookEntry != ppEntry->end()) {
-          if (bookEntry->size < orderSize) {
-            executeTrade(order.symbol, order.trader, bookEntry->trader, price,
-                         bookEntry->size);
-            orderSize -= bookEntry->size;
+          t_size entrySize = bookEntry->size;
+          if (__builtin_expect(entrySize == 0, 0)) {
+            ++bookEntry;
+          } else if (__builtin_expect(entrySize < orderSize, 1)) {
+            // Inline executeTrade for buy order
+            {
+              t_execution exec;
+              exec.symbol = orderSymbol;
+              exec.price = price;
+              exec.size = entrySize;
+              exec.side = 0;
+              exec.trader = order.trader;
+              execution(exec);
+              exec.side = 1;
+              exec.trader = bookEntry->trader;
+              execution(exec);
+            }
+            orderSize -= entrySize;
             ++bookEntry;
           } else {
-            executeTrade(order.symbol, order.trader, bookEntry->trader, price,
-                         orderSize);
-            if (bookEntry->size > orderSize)
-              bookEntry->size -= orderSize;
+            // Inline executeTrade for buy order (entrySize >= orderSize)
+            {
+              t_execution exec;
+              exec.symbol = orderSymbol;
+              exec.price = price;
+              exec.size = orderSize;
+              exec.side = 0;
+              exec.trader = order.trader;
+              execution(exec);
+              exec.side = 1;
+              exec.trader = bookEntry->trader;
+              execution(exec);
+            }
+            if (entrySize > orderSize)
+              bookEntry->size = entrySize - orderSize;
             else
               ++bookEntry;
 
-            ppEntry->erase(ppEntry->begin(), bookEntry);
-            while (ppEntry->begin() != bookEntry) {
-              ppEntry->pop_front();
+            // Optimized pop_front loop - remove processed entries
+            auto it = ppEntry->begin();
+            while (it != bookEntry) {
+              ppEntry->erase_after(ppEntry->before_begin());
+              it = ppEntry->begin();
             }
-            return ++curOrderID;
+            return ++hotPathVars.curOrderID;
           }
         }
         /* We have exhausted all orders at the askMin price point. Move on to
            the next price level. */
         ppEntry->clear();
         ppEntry++;
-        askMin++;
-      } while (price >= askMin);
+        hotPathVars.askMin++;
+      } while (price >= hotPathVars.askMin);
     }
 
-    auto entry = arenaBookEntries.begin() + (++curOrderID);
+    auto entry = arenaBookEntries.begin() + (++hotPathVars.curOrderID);
     entry->size = orderSize;
     entry->trader = order.trader;
-    pricePoints[price].push_back(*entry);
-    if (bidMax < price) bidMax = price;
-    return curOrderID;
+    pricePointsPtr[price].push_back(*entry);
+    if (hotPathVars.bidMax < price) hotPathVars.bidMax = price;
+    return hotPathVars.curOrderID;
 
   } else {/* Sell order */
     /* Look for outstanding Buy orders that cross with the incoming order */
-    if (price <= bidMax) {
-      auto ppEntry = pricePoints.begin() + bidMax;
+    if (price <= hotPathVars.bidMax) {
+      auto ppEntry = pricePointsPtr + hotPathVars.bidMax;
       do {
         auto bookEntry = ppEntry->begin();
         while (bookEntry != ppEntry->end()) {
-          if (bookEntry->size < orderSize) {
-            executeTrade(order.symbol, bookEntry->trader, order.trader, price,
-                         bookEntry->size);
-            orderSize -= bookEntry->size;
+          t_size entrySize = bookEntry->size;
+          if (__builtin_expect(entrySize == 0, 0)) {
+            ++bookEntry;
+          } else if (__builtin_expect(entrySize < orderSize, 1)) {
+            // Inline executeTrade for sell order
+            {
+              t_execution exec;
+              exec.symbol = orderSymbol;
+              exec.price = price;
+              exec.size = entrySize;
+              exec.side = 0;
+              exec.trader = bookEntry->trader;
+              execution(exec);
+              exec.side = 1;
+              exec.trader = order.trader;
+              execution(exec);
+            }
+            orderSize -= entrySize;
             ++bookEntry;
           } else {
-            executeTrade(order.symbol, bookEntry->trader, order.trader, price,
-                         orderSize);
-            if (bookEntry->size > orderSize)
-              bookEntry->size -= orderSize;
+            // Inline executeTrade for sell order (entrySize >= orderSize)
+            {
+              t_execution exec;
+              exec.symbol = orderSymbol;
+              exec.price = price;
+              exec.size = orderSize;
+              exec.side = 0;
+              exec.trader = bookEntry->trader;
+              execution(exec);
+              exec.side = 1;
+              exec.trader = order.trader;
+              execution(exec);
+            }
+            if (entrySize > orderSize)
+              bookEntry->size = entrySize - orderSize;
             else
               ++bookEntry;
 
-            while (ppEntry->begin() != bookEntry) {
-              ppEntry->pop_front();
+            // Optimized pop_front loop - remove processed entries
+            auto it = ppEntry->begin();
+            while (it != bookEntry) {
+              ppEntry->erase_after(ppEntry->before_begin());
+              it = ppEntry->begin();
             }
-            return ++curOrderID;
+            return ++hotPathVars.curOrderID;
           }
         }
 
@@ -131,16 +167,16 @@ t_orderid OrderBook::limit(t_order& order) {
            the next price level. */
         ppEntry->clear();
         ppEntry--;
-        bidMax--;
-      } while (price <= bidMax);
+        hotPathVars.bidMax--;
+      } while (price <= hotPathVars.bidMax);
     }
 
-    auto entry = arenaBookEntries.begin() + (++curOrderID);
+    auto entry = arenaBookEntries.begin() + (++hotPathVars.curOrderID);
     entry->size = orderSize;
     entry->trader = order.trader;
-    pricePoints[price].push_back(*entry);
-    if (askMin > price) askMin = price;
-    return curOrderID;
+    pricePointsPtr[price].push_back(*entry);
+    if (hotPathVars.askMin > price) hotPathVars.askMin = price;
+    return hotPathVars.curOrderID;
   }
 }
 

@@ -71,7 +71,6 @@
 #include "order_book.h"
 #include <boost/intrusive/slist.hpp>
 #include <boost/intrusive/list.hpp>
-#include "util.h"
 
 void init() { OB::OrderBook::get().initialize(); }
 
