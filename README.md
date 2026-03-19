@@ -1,12 +1,12 @@
 
 
 
-# 🚀 AutoResearch: HFT Order Book 
-**Autonomous AI Agent for C++ High-Frequency Trading Micro-Optimizations**
+# 🚀 Auto Optimization: HFT Order Book 
+**Autonomous AI Agent for C++ High-Frequency Trading Optimizations**
 
 本项目受 Andrej Karpathy 的 [autoresearch](https://github.com/karpathy/autoresearch) 启发，将其“AI 自动化科研迭代”的理念借鉴到了**C++ 极速代码优化**领域。
 
-在这里，我们让 AI Agent（如 Claude 3.5 Sonnet / GPT-4o，运行在 Claude Code，Cursor 里 ）接管到一个极速订单簿撮合引擎项目中 [QuantCup 订单簿撮合引擎](https://github.com/ajtulloch/quantcup-orderbook)，通过无休止的 **“提出假设 ➡️ 修改代码 ➡️ 极限评测 ➡️ Git回滚/提交”** 闭环，通过AI的自主试探，榨干 CPU 的最后一丝性能。
+在这里，我们让 AI Agent 接管到一个极速订单簿撮合引擎项目中 [QuantCup 订单簿撮合引擎](https://github.com/ajtulloch/quantcup-orderbook)，通过无休止的 **“提出假设 ➡️ 修改代码 ➡️ 极限评测 ➡️ Git回滚/提交”** 闭环，通过AI的自主试探，榨干 CPU 的最后一丝性能。
 
 ## 💡 核心理念 (The Concept)
 
