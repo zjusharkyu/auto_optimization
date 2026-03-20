@@ -1,4 +1,0 @@
-/home/yufeng/auto_optimization/build/CMakeFiles/test.dir
-/home/yufeng/auto_optimization/build/CMakeFiles/score.dir
-/home/yufeng/auto_optimization/build/CMakeFiles/edit_cache.dir
-/home/yufeng/auto_optimization/build/CMakeFiles/rebuild_cache.dir
